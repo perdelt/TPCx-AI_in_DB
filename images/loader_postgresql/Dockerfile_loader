@@ -1,0 +1,64 @@
+######################################################################################
+# Dockerfile for TPCx-AI supplements - Load into PostgreSQL
+######################################################################################
+#
+# This Dockerfile builds an image for loading TPCx-AI data into PostgreSQL.
+#
+# Base Image: python:3.10.14
+#
+# Author: Patrick K. Erdelt
+# Email: patrick.erdelt@bht-berlin.de
+# Date: 2024-05-26
+# Version: 1.0
+# Description: This container runs a Python script that loads TPCx-AI data into a PostgreSQL instance, that is expected to run outside of the container.
+# Data is expected in /data/tpcxai/SF1/training etc. for SF=1
+######################################################################################
+
+
+
+
+###########################################
+######### Use a Python base image #########
+###########################################
+FROM python:3.10.14
+
+
+####################################################
+######### Some meta data of the containers #########
+####################################################
+LABEL maintainer="Patrick K. Erdelt <patrick.erdelt@bht-berlin.de>"
+LABEL version="1.0"
+LABEL description="This container runs a Python script that loads TPCx-AI data into a PostgreSQL instance, that is expected to run outside of the container."
+
+
+#############################################
+######### Set default configuration #########
+#############################################
+ENV TPCxAI_SCALE_FACTOR=1
+ENV BEXHOMA_HOST="localhost"
+ENV BEXHOMA_PORT 5432
+ENV BEXHOMA_CONNECTION="postgresql"
+ENV BEXHOMA_EXPERIMENT="12345"
+ENV DATABASE postgres
+ENV USER postgres
+ENV PASSWORD postgres
+VOLUME /data/
+
+
+##############################################
+######### Copy and run loader script #########
+##############################################
+WORKDIR /usr/src/app
+# Copy toolkit into image
+COPY ./ ./
+# Install requirements
+RUN pip install --no-cache-dir  -r ./requirements.txt
+# Run the script
+CMD [ "python", "./all_tables_import.py" ]
+
+
+
+# start in bash for debugging
+#ENTRYPOINT /bin/bash
+#CMD ["/bin/bash"]
+#CMD ["sleep 1000"]
