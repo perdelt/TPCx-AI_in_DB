@@ -67,7 +67,6 @@ if __name__ == '__main__':
 	#print("##### Execution times statistics")
 	#df1, df2 = evaluate.get_measures_and_statistics(numQuery="1", type='timer', name='execution')
 
-	# result set of query 43 (evaluation store)
 	numQuery="45"
 	print("#####", query_properties[numQuery]["title"])
 	df = evaluate.get_datastorage_df(numQuery, 0)
