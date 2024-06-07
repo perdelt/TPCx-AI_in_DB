@@ -11,7 +11,7 @@ This includes
 The workflow is basically
 * Generate the data (once per SF)
 * Start an instance of PostgreSQL/MADLib
-* Run schema scripts `use-cases/resources/helper_functions.sql` and `use-cases/all-schema.sql`
+* Run schema scripts `use-cases/helper_functions.sql` and `use-cases/all-schema.sql`
 * Run an instance of the loader
 * Run the benchmark
 * Drop the instance of PostgreSQL/MADLib when done
