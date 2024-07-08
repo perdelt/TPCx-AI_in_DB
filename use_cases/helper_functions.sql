@@ -668,3 +668,8 @@ $$ LANGUAGE plpgsql;
 --                 FLOOR((EXTRACT(SECOND FROM execution_time) - FLOOR(EXTRACT(SECOND FROM execution_time))) * 1000)::INTEGER);
 -- END;
 -- $$ LANGUAGE plpgsql;
+
+
+
+
+call create_evaluation_results_table();
