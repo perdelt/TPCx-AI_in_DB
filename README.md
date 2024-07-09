@@ -198,9 +198,32 @@ You can set some parameters as environment variables
 
 You can run the benchmark using https://github.com/Beuth-Erdelt/DBMS-Benchmarker via
 
-`dbmsbenchmarker -f tpcx-ai -b -w connection -vr -e yes -pn 1 -wli "SF=1 first test" run`
+`dbmsbenchmarker -f tpcx-ai -b -vr -e yes -wli "SF=1 first test" run`
 
 with the configuration folder `tpcx-ai` provided by this repository.
+
+You may also want to run the phases of the benchmark separately:
+
+### Training Power
+
+`dbmsbenchmarker -f tpcx-ai -b -e yes -wli "SF=1 training" -qf queries-training.config run`
+
+Alternatively, this configuration shows the runtimes of preparation and training separately:
+
+`dbmsbenchmarker -f tpcx-ai -b -e yes -wli "SF=1 training" -qf queries-preparing-and-training.config run`
+
+### Scoring
+
+`dbmsbenchmarker -f tpcx-ai -b -e yes -wli "SF=1 scoring" -qf queries-scoring.config run`
+
+### Serve Power
+
+`dbmsbenchmarker -f tpcx-ai -b -e yes -wli "SF=1 serving power" -qf queries-serving.config run`
+
+### Serve Throughput
+
+`dbmsbenchmarker -f tpcx-ai -b -e yes -wli "SF=1 serving throughput 2 streams" -qf queries-serving.config -p 2 -pp run`
+
 
 ### Prerequisites
 
@@ -217,11 +240,11 @@ At the end it reads and shows the content of the evaluation store and sizes of t
 Arguments mean
 * `-f tpcx-ai`: Folder containing the parameter files `queries.config` and `connections.config`
 * `-b`: Batch mode (reduced output)
-* `-w connection`: Run sequence as a stream without reconnection
 * `-vr`: Verbose result sets
 * `-e yes`: Build evaluation cube
-* `-pn 1`: Each query is executed once
 * `-wli "SF=1 first test"`: Workload info text to be included in results for convinience
+* `-p 2`: 2 Streams
+* `-pp`: Streams in parallel (independent) processes
 
 After the benchmark has finished you will see some results and something like
 ```
