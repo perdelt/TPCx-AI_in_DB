@@ -68,12 +68,14 @@ if __name__ == '__main__':
 	#df1, df2 = evaluate.get_measures_and_statistics(numQuery="1", type='timer', name='execution')
 
 	numQuery="45"
-	print("#####", query_properties[numQuery]["title"])
-	df = evaluate.get_datastorage_df(numQuery, 0)
-	print(df)
+	if numQuery in list_queries:
+		print("#####", query_properties[numQuery]["title"])
+		df = evaluate.get_datastorage_df(numQuery, 0)
+		print(df)
 
 	numQuery="46"
-	print("#####", query_properties[numQuery]["title"])
-	df = evaluate.get_datastorage_df(numQuery, 0)
-	print(df)
+	if numQuery in list_queries:
+		print("#####", query_properties[numQuery]["title"])
+		df = evaluate.get_datastorage_df(numQuery, 0)
+		print(df)
 
