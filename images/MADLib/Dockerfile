@@ -281,16 +281,19 @@ RUN cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf /var/lib/postgresql/$PG_MAJOR/
 ### official PostgreSQL scripts for Docker images
 COPY docker-entrypoint.sh /usr/local/bin/
 COPY docker-ensure-initdb.sh /usr/local/bin/
+COPY docker-entrypoint-madlib.sh /usr/local/bin/
 
 # Allow everything inside Docker container
 RUN chmod -R 777 /usr/local/bin/docker-entrypoint.sh
+RUN chmod -R 777 /usr/local/bin/docker-entrypoint-madlib.sh
 
 WORKDIR /usr/local/bin/
 
 ### TODO: is this still necessary?
-RUN ln -sT docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
+#RUN ln -sT docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
 
 
 ### container runs PostgreSQL as service
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+#ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-madlib.sh"]
 CMD ["postgres"]
