@@ -226,6 +226,7 @@ COPY docker-ensure-initdb.sh /usr/local/bin/
 COPY docker-entrypoint-madlib.sh /usr/local/bin/
 
 # Allow everything inside Docker container
+RUN chmod -R 777 /usr/local/bin/docker-ensure-initdb.sh
 RUN chmod -R 777 /usr/local/bin/docker-entrypoint.sh
 RUN chmod -R 777 /usr/local/bin/docker-entrypoint-madlib.sh
 

@@ -8,33 +8,32 @@ POSTGRES_PASSWORD=postgres
 PGDATA=/var/lib/postgresql/data
 export PGDATA=/var/lib/postgresql/data
 
-echo "###should be empty - new path###"
+mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 1777 "$PGDATA"
 
-chown postgres:postgres $PGDATA
+# echo "###should be empty - new path###"
+# ls -lh /var/lib/postgresql/data
 
-ls -lh /var/lib/postgresql/data
+# echo "###should be empty###"
+# ls -lh /var/lib/postgresql/$PG_MAJOR/main
 
-echo "###should be empty###"
+# echo "###should contain config###"
+# ls -lh /var/lib/postgresql/$PG_MAJOR/main
 
-ls -lh /var/lib/postgresql/$PG_MAJOR/main
+# echo "###show df###"
+# df -hT /var/lib/postgresql/15/main
 
-echo "###should contain config###"
-
-ls -lh /var/lib/postgresql/$PG_MAJOR/main
-
-echo "###show df###"
-df -hT /var/lib/postgresql/15/main
-
-echo "###should contain more config###"
-ls -lh /etc/postgresql/15/main/
+# echo "###should contain more config###"
+# ls -lh /etc/postgresql/15/main/
 
 # echo "###done###"
 # ls /etc/postgresql/$PG_MAJOR/main/
 # ls /var/lib/postgresql/$PG_MAJOR/main/
 
 mkdir /docker-entrypoint-initdb.d
+chown postgres:postgres /docker-entrypoint-initdb.d
 
-dpkg -l | grep postgresql
+
+# dpkg -l | grep postgresql
 
 
 # ln -sT docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
@@ -43,6 +42,8 @@ dpkg -l | grep postgresql
 cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf $PGDATA/postgresql.conf
 cp -r /etc/postgresql/$PG_MAJOR/main/conf.d $PGDATA/conf.d
 cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf $PGDATA/pg_hba.conf
+cp /etc/postgresql/$PG_MAJOR/main/postgresql.auto.conf $PGDATA/postgresql.auto.conf
+
 
 ### install MADLib into PostgreSQL
 /etc/init.d/postgresql start
@@ -64,8 +65,7 @@ cp /apache-madlib-2.1.0-src/build/src/ports/postgres/15/extension/ /usr/share/po
 #/bin/sh -c 
 /usr/local/bin/docker-entrypoint.sh "$@"
 
-echo "###done###"
-
-ls -lh /var/lib/postgresql/$PG_MAJOR/main
+# echo "###done###"
+# ls -lh /var/lib/postgresql/$PG_MAJOR/main
 
 exit 0
