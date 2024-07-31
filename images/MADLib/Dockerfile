@@ -215,6 +215,61 @@ RUN mkdir /docker-entrypoint-initdb.d
 ### TODO: is this still necessary?
 #RUN mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 1777 "$PGDATA"
 
+
+#######################
+### optionally pgvector
+#######################
+RUN cd /tmp ; git clone --branch v0.6.1 https://github.com/pgvector/pgvector.git ; cd pgvector ; make ; make install
+
+
+##########################
+### optionally TimescaleDB
+##########################
+# https://docs.timescale.com/self-hosted/latest/install/installation-linux/
+RUN echo "deb https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -c -s) main" | tee /etc/apt/sources.list.d/timescaledb.list
+RUN wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --dearmor -o /etc/apt/trusted.gpg.d/timescaledb.gpg
+RUN apt-get update -y
+RUN apt-get install timescaledb-2-postgresql-$PG_MAJOR -y
+# include TimescaleDB - if not included in Citus section
+#RUN echo "shared_preload_libraries = '/usr/lib/postgresql/$PG_MAJOR/lib/timescaledb'" >> /etc/postgresql/$PG_MAJOR/main/postgresql.conf
+#RUN echo "shared_preload_libraries = '/usr/lib/postgresql/$PG_MAJOR/lib/timescaledb'" >> /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
+
+
+###################
+### optionally PL/R
+###################
+# https://github.com/postgres-plr/plr/blob/master/install.md
+### install R
+# RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+RUN add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+RUN apt install r-base -y
+### install extension
+RUN apt-get install postgresql-$PG_MAJOR-plr
+### tell PostgreSQL where to find R
+RUN echo "R_HOME='/usr/lib/R' \n\
+" >> /etc/postgresql/$PG_MAJOR/main/environment
+
+
+######################
+### optionally PostGIS
+######################
+# https://trac.osgeo.org/postgis/wiki/UsersWikiPostGIS3UbuntuPGSQLApt
+RUN apt install postgresql-$PG_MAJOR-postgis-3 -y
+RUN apt install postgis -y
+
+
+####################
+### optionally Citus
+####################
+# https://github.com/citusdata/citus?tab=readme-ov-file#getting-started
+RUN curl https://install.citusdata.com/community/deb.sh | bash
+RUN apt-get -y install postgresql-$PG_MAJOR-citus-12.1
+# automatically change DLL includes
+RUN pg_conftool /etc/postgresql/$PG_MAJOR/main/postgresql.conf set shared_preload_libraries citus,timescaledb
+RUN pg_conftool /etc/postgresql/$PG_MAJOR/main/postgresql.conf set dynamic_library_path /usr/lib/postgresql/15/lib
+# does not exist yet
+#RUN pg_conftool /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf set shared_preload_libraries citus
+
 ### copy config from /etc to /var/lib
 #RUN cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
 #RUN cp -r /etc/postgresql/$PG_MAJOR/main/conf.d /var/lib/postgresql/$PG_MAJOR/main/conf.d
