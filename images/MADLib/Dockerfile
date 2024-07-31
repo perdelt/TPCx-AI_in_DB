@@ -46,9 +46,9 @@ ENV PATH $PATH:/usr/lib/postgresql/$PG_MAJOR/bin
 ### password is fixed
 ENV POSTGRES_PASSWORD postgres
 ### it's not /var/lib/postgresql/data
-ENV PGDATA /var/lib/postgresql/$PG_MAJOR/main
+ENV PGDATA /var/lib/postgresql/data
 ### it's not /var/lib/postgresql/data
-VOLUME /var/lib/postgresql/$PG_MAJOR/main
+VOLUME /var/lib/postgresql/data
 
 
 ######### Get some basic tools #########
@@ -107,6 +107,9 @@ RUN echo ' \n\
     host    all             all             all                     trust \n\
 ' > /etc/postgresql/$PG_MAJOR/main/pg_hba.conf
 
+RUN echo "data_directory = '/var/lib/postgresql/data'\n\
+" >> /etc/postgresql/15/main/postgresql.conf
+
 ### install Python3 extension
 RUN apt-get install postgresql-plpython3-$PG_MAJOR -y
 
@@ -162,18 +165,18 @@ RUN wget https://dist.apache.org/repos/dist/release/madlib/2.1.0/apache-madlib-2
 RUN chmod -R 777 /apache-madlib-2.1.0-src
 
 ### install MADLib into PostgreSQL
-RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; /apache-madlib-2.1.0-src/build/src/bin/madpack -s madlib -p postgres -c postgres/postgres@localhost:5432/postgres install"
+#RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; /apache-madlib-2.1.0-src/build/src/bin/madpack -s madlib -p postgres -c postgres/postgres@localhost:5432/postgres install"
 
 ### reset lib paths to default - this is necessary for Citus (preloaded shared libs)
-RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'ALTER SYSTEM SET dynamic_library_path = \"/usr/lib/postgresql/15/lib\"'"
-RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'select pg_reload_conf()'"
+#RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'ALTER SYSTEM SET dynamic_library_path = \"/usr/lib/postgresql/15/lib\"'"
+#RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'select pg_reload_conf()'"
 
 # MADLib changes DLL path to own subfolder (?)
 # copy files to stay conform to PostgreSQL paths
-RUN cp /usr/lib/postgresql/15/lib/ /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ -r
-RUN cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ /usr/lib/postgresql/ -r
+#RUN cp /usr/lib/postgresql/15/lib/ /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ -r
+#RUN cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ /usr/lib/postgresql/ -r
 #RUN cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/lib /usr/lib/postgresql/15/ -r
-RUN cp /apache-madlib-2.1.0-src/build/src/ports/postgres/15/extension/ /usr/share/postgresql/15/ -r
+#RUN cp /apache-madlib-2.1.0-src/build/src/ports/postgres/15/extension/ /usr/share/postgresql/15/ -r
 
 
 
@@ -212,71 +215,10 @@ RUN mkdir /docker-entrypoint-initdb.d
 ### TODO: is this still necessary?
 #RUN mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 1777 "$PGDATA"
 
-
-
-#######################
-### optionally pgvector
-#######################
-RUN cd /tmp ; git clone --branch v0.6.1 https://github.com/pgvector/pgvector.git ; cd pgvector ; make ; make install
-
-
-##########################
-### optionally TimescaleDB
-##########################
-# https://docs.timescale.com/self-hosted/latest/install/installation-linux/
-RUN echo "deb https://packagecloud.io/timescale/timescaledb/ubuntu/ $(lsb_release -c -s) main" | tee /etc/apt/sources.list.d/timescaledb.list
-RUN wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --dearmor -o /etc/apt/trusted.gpg.d/timescaledb.gpg
-RUN apt-get update -y
-RUN apt-get install timescaledb-2-postgresql-$PG_MAJOR -y
-# include TimescaleDB - if not included in Citus section
-#RUN echo "shared_preload_libraries = '/usr/lib/postgresql/$PG_MAJOR/lib/timescaledb'" >> /etc/postgresql/$PG_MAJOR/main/postgresql.conf
-#RUN echo "shared_preload_libraries = '/usr/lib/postgresql/$PG_MAJOR/lib/timescaledb'" >> /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
-
-
-###################
-### optionally PL/R
-###################
-# https://github.com/postgres-plr/plr/blob/master/install.md
-### install R
-# RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-RUN add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
-RUN apt install r-base -y
-### install extension
-RUN apt-get install postgresql-$PG_MAJOR-plr
-### tell PostgreSQL where to find R
-RUN echo "R_HOME='/usr/lib/R' \n\
-" >> /etc/postgresql/$PG_MAJOR/main/environment
-
-
-######################
-### optionally PostGIS
-######################
-# https://trac.osgeo.org/postgis/wiki/UsersWikiPostGIS3UbuntuPGSQLApt
-RUN apt install postgresql-$PG_MAJOR-postgis-3 -y
-RUN apt install postgis -y
-
-
-####################
-### optionally Citus
-####################
-# https://github.com/citusdata/citus?tab=readme-ov-file#getting-started
-RUN curl https://install.citusdata.com/community/deb.sh | bash
-RUN apt-get -y install postgresql-$PG_MAJOR-citus-12.1
-# automatically change DLL includes
-RUN pg_conftool /etc/postgresql/$PG_MAJOR/main/postgresql.conf set shared_preload_libraries citus,timescaledb
-RUN pg_conftool /etc/postgresql/$PG_MAJOR/main/postgresql.conf set dynamic_library_path /usr/lib/postgresql/15/lib
-# does not exist yet
-#RUN pg_conftool /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf set shared_preload_libraries citus
-
-
-# restart PostgreSQL - not used, just for testing
-#RUN /etc/init.d/postgresql restart
-
-
 ### copy config from /etc to /var/lib
-RUN cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
-RUN cp -r /etc/postgresql/$PG_MAJOR/main/conf.d /var/lib/postgresql/$PG_MAJOR/main/conf.d
-RUN cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf /var/lib/postgresql/$PG_MAJOR/main/pg_hba.conf
+#RUN cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
+#RUN cp -r /etc/postgresql/$PG_MAJOR/main/conf.d /var/lib/postgresql/$PG_MAJOR/main/conf.d
+#RUN cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf /var/lib/postgresql/$PG_MAJOR/main/pg_hba.conf
 
 ### official PostgreSQL scripts for Docker images
 COPY docker-entrypoint.sh /usr/local/bin/
@@ -292,6 +234,7 @@ WORKDIR /usr/local/bin/
 ### TODO: is this still necessary?
 #RUN ln -sT docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
 
+# RUN apt-get remove postgresql-16 postgresql-16-postgis-3 postgresql-16-postgis-3-scripts -y
 
 ### container runs PostgreSQL as service
 #ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

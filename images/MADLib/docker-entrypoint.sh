@@ -2,7 +2,7 @@
 # set -Eeo pipefail
 # TODO swap to -Eeuo pipefail above (after handling all potentially-unset variables)
 
-set -x  # Start debug mode
+# set -x  # Start debug mode
 
 #PG_MAJOR=15
 #PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin
