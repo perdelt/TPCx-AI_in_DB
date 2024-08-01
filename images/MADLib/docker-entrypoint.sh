@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
-set -Eeo pipefail
+# set -Eeo pipefail
 # TODO swap to -Eeuo pipefail above (after handling all potentially-unset variables)
+
+# set -x  # Start debug mode
+
+#PG_MAJOR=15
+#PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin
+#POSTGRES_PASSWORD=postgres
+#PGDATA=/var/lib/postgresql/$PG_MAJOR/main
+#cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
+#cp -r /etc/postgresql/$PG_MAJOR/main/conf.d /var/lib/postgresql/$PG_MAJOR/main/conf.d
+#cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf /var/lib/postgresql/$PG_MAJOR/main/pg_hba.conf
 
 # usage: file_env VAR [DEFAULT]
 #    ie: file_env 'XYZ_DB_PASSWORD' 'example'

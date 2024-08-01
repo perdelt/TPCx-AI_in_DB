@@ -32,7 +32,8 @@ CALL uc01_score('uc01_score_preprocessed', 'uc01_model');
 perform record_execution_time('uc01', 'score' , v_start_time);
 
 v_start_time := clock_timestamp();
-call uc01_serve('uc01_model', 'uc01_serve_results');
+CALL uc01_serve('uc01_model', 'uc01_serve_preprocessed', 'uc01_serve_results');
+-- uc01_serve('uc01_model', 'uc01_serve_results');
 perform record_execution_time('uc01', 'serve' , v_start_time);
 
 /*

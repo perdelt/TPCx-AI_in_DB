@@ -144,20 +144,22 @@ $$;
 -- serving
 CREATE OR REPLACE procedure uc01_serve(
     model varchar,
+    preprocessed varchar,
     output_table varchar
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    call uc01_preprocess('serve', 'uc01_serve_preprocessed');
+    -- call uc01_preprocess('serve', 'uc01_serve_preprocessed');
+    EXECUTE format('call uc01_preprocess(''%I'', ''%I'')', 'serve', preprocessed);
     EXECUTE format('DROP TABLE IF EXISTS %I', output_table);
 
     EXECUTE format('
         CREATE TABLE %I AS
         SELECT data.*, (madlib.closest_column(centroids, ARRAY[frequency, returnratio], ''madlib.squared_dist_norm2'')).*
-        FROM uc01_serve_preprocessed AS data, %I;
+        FROM %I AS data, %I;
         ALTER TABLE %I RENAME column_id TO cluster_id;
-    ', output_table, model, output_table);
+    ', output_table, preprocessed, model, output_table); -- uc01_serve_preprocessed
 
 END;
 $$;
