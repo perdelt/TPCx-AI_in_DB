@@ -8,45 +8,29 @@ POSTGRES_PASSWORD=postgres
 PGDATA=/var/lib/postgresql/data
 export PGDATA=/var/lib/postgresql/data
 
+### init volume
 mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 1777 "$PGDATA"
-
-# echo "###should be empty - new path###"
-# ls -lh /var/lib/postgresql/data
-
-# echo "###should be empty###"
-# ls -lh /var/lib/postgresql/$PG_MAJOR/main
-
-# echo "###should contain config###"
-# ls -lh /var/lib/postgresql/$PG_MAJOR/main
-
-# echo "###show df###"
-# df -hT /var/lib/postgresql/15/main
-
-# echo "###should contain more config###"
-# ls -lh /etc/postgresql/15/main/
-
-# echo "###done###"
-# ls /etc/postgresql/$PG_MAJOR/main/
-# ls /var/lib/postgresql/$PG_MAJOR/main/
-
-mkdir /docker-entrypoint-initdb.d
+mkdir -p /docker-entrypoint-initdb.d
 chown postgres:postgres /docker-entrypoint-initdb.d
-
-
-# dpkg -l | grep postgresql
-
-
-# ln -sT docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
 /usr/local/bin/docker-ensure-initdb.sh "$@"
+
+##############################
+### copy configs to new volume
+##############################
 
 cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf $PGDATA/postgresql.conf
 cp -r /etc/postgresql/$PG_MAJOR/main/conf.d $PGDATA/conf.d
 cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf $PGDATA/pg_hba.conf
 cp /etc/postgresql/$PG_MAJOR/main/postgresql.auto.conf $PGDATA/postgresql.auto.conf
 
-
+##################################
 ### install MADLib into PostgreSQL
+##################################
+
+### start PostgreSQL
 /etc/init.d/postgresql start
+
+### install MADLib
 su postgres -c "PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; /apache-madlib-2.1.0-src/build/src/bin/madpack -s madlib -p postgres -c postgres/postgres@localhost:5432/postgres install"
 
 ### reset lib paths to default - this is necessary for Citus (preloaded shared libs)
@@ -60,12 +44,13 @@ cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ /usr/lib/postgre
 #RUN cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/lib /usr/lib/postgresql/15/ -r
 cp /apache-madlib-2.1.0-src/build/src/ports/postgres/15/extension/ /usr/share/postgresql/15/ -r
 
+### stop PostgreSQL
 /etc/init.d/postgresql stop
 
-#/bin/sh -c 
+### PostgreSQL's official entrypoint
 /usr/local/bin/docker-entrypoint.sh "$@"
 
 # echo "###done###"
-# ls -lh /var/lib/postgresql/$PG_MAJOR/main
+# ls -lh $PGDATA
 
 exit 0

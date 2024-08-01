@@ -45,9 +45,9 @@ ENV PG_MAJOR 15
 ENV PATH $PATH:/usr/lib/postgresql/$PG_MAJOR/bin
 ### password is fixed
 ENV POSTGRES_PASSWORD postgres
-### it's not /var/lib/postgresql/data
+### it's /var/lib/postgresql/$PG_MAJOR/main at first, but will be reinstalled here
 ENV PGDATA /var/lib/postgresql/data
-### it's not /var/lib/postgresql/data
+### it's /var/lib/postgresql/$PG_MAJOR/main at first, but will be reinstalled here
 VOLUME /var/lib/postgresql/data
 
 
@@ -164,6 +164,9 @@ RUN wget https://dist.apache.org/repos/dist/release/madlib/2.1.0/apache-madlib-2
 ### TODO: Reduce to minimum requirements
 RUN chmod -R 777 /apache-madlib-2.1.0-src
 
+### the following has been moved to docker-entrypoint-madlib.sh
+### installation can only happen after volume has been mounted
+
 ### install MADLib into PostgreSQL
 #RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; /apache-madlib-2.1.0-src/build/src/bin/madpack -s madlib -p postgres -c postgres/postgres@localhost:5432/postgres install"
 
@@ -269,6 +272,10 @@ RUN pg_conftool /etc/postgresql/$PG_MAJOR/main/postgresql.conf set shared_preloa
 RUN pg_conftool /etc/postgresql/$PG_MAJOR/main/postgresql.conf set dynamic_library_path /usr/lib/postgresql/15/lib
 # does not exist yet
 #RUN pg_conftool /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf set shared_preload_libraries citus
+
+
+### the following has been moved to docker-entrypoint-madlib.sh
+### installation can only happen after volume has been mounted
 
 ### copy config from /etc to /var/lib
 #RUN cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
