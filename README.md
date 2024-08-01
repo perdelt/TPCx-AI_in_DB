@@ -200,6 +200,9 @@ You can set some parameters as environment variables
 
 You can run the benchmark using https://github.com/Beuth-Erdelt/DBMS-Benchmarker with the configuration folder `tpcx-ai` provided by this repository.
 
+The complete benchmark can be run using
+`dbmsbenchmarker -f tpcx-ai -b -e yes -wli "SF=1 complete" run`
+
 You may want to run the phases of the benchmark separately:
 
 ### Training Power
@@ -490,6 +493,8 @@ public          uc10_train_preprocessed                         479 MB
 and some timing information.
 
 ### Serve Power
+
+Currently, only serving for UC01 is provided separately.
 
 `dbmsbenchmarker -f tpcx-ai -b -e yes -wli "SF=1 serving power" -qf queries-serving.config run`
 
