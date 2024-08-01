@@ -45,10 +45,10 @@ ENV PG_MAJOR 15
 ENV PATH $PATH:/usr/lib/postgresql/$PG_MAJOR/bin
 ### password is fixed
 ENV POSTGRES_PASSWORD postgres
-### it's not /var/lib/postgresql/data
-ENV PGDATA /var/lib/postgresql/$PG_MAJOR/main
-### it's not /var/lib/postgresql/data
-VOLUME /var/lib/postgresql/$PG_MAJOR/main
+### it's /var/lib/postgresql/$PG_MAJOR/main at first, but will be reinstalled here
+ENV PGDATA /var/lib/postgresql/data
+### it's /var/lib/postgresql/$PG_MAJOR/main at first, but will be reinstalled here
+VOLUME /var/lib/postgresql/data
 
 
 ######### Get some basic tools #########
@@ -107,6 +107,9 @@ RUN echo ' \n\
     host    all             all             all                     trust \n\
 ' > /etc/postgresql/$PG_MAJOR/main/pg_hba.conf
 
+RUN echo "data_directory = '/var/lib/postgresql/data'\n\
+" >> /etc/postgresql/15/main/postgresql.conf
+
 ### install Python3 extension
 RUN apt-get install postgresql-plpython3-$PG_MAJOR -y
 
@@ -161,19 +164,22 @@ RUN wget https://dist.apache.org/repos/dist/release/madlib/2.1.0/apache-madlib-2
 ### TODO: Reduce to minimum requirements
 RUN chmod -R 777 /apache-madlib-2.1.0-src
 
+### the following has been moved to docker-entrypoint-madlib.sh
+### installation can only happen after volume has been mounted
+
 ### install MADLib into PostgreSQL
-RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; /apache-madlib-2.1.0-src/build/src/bin/madpack -s madlib -p postgres -c postgres/postgres@localhost:5432/postgres install"
+#RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; /apache-madlib-2.1.0-src/build/src/bin/madpack -s madlib -p postgres -c postgres/postgres@localhost:5432/postgres install"
 
 ### reset lib paths to default - this is necessary for Citus (preloaded shared libs)
-RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'ALTER SYSTEM SET dynamic_library_path = \"/usr/lib/postgresql/15/lib\"'"
-RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'select pg_reload_conf()'"
+#RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'ALTER SYSTEM SET dynamic_library_path = \"/usr/lib/postgresql/15/lib\"'"
+#RUN su postgres -c "/etc/init.d/postgresql start; PATH=$PATH:/usr/lib/postgresql/$PG_MAJOR/bin; psql -h localhost -c 'select pg_reload_conf()'"
 
 # MADLib changes DLL path to own subfolder (?)
 # copy files to stay conform to PostgreSQL paths
-RUN cp /usr/lib/postgresql/15/lib/ /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ -r
-RUN cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ /usr/lib/postgresql/ -r
+#RUN cp /usr/lib/postgresql/15/lib/ /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ -r
+#RUN cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/ /usr/lib/postgresql/ -r
 #RUN cp /apache-madlib-2.1.0-src/build/src/../src/ports/postgres/15/lib /usr/lib/postgresql/15/ -r
-RUN cp /apache-madlib-2.1.0-src/build/src/ports/postgres/15/extension/ /usr/share/postgresql/15/ -r
+#RUN cp /apache-madlib-2.1.0-src/build/src/ports/postgres/15/extension/ /usr/share/postgresql/15/ -r
 
 
 
@@ -211,7 +217,6 @@ RUN set -eux; \
 RUN mkdir /docker-entrypoint-initdb.d
 ### TODO: is this still necessary?
 #RUN mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 1777 "$PGDATA"
-
 
 
 #######################
@@ -269,28 +274,32 @@ RUN pg_conftool /etc/postgresql/$PG_MAJOR/main/postgresql.conf set dynamic_libra
 #RUN pg_conftool /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf set shared_preload_libraries citus
 
 
-# restart PostgreSQL - not used, just for testing
-#RUN /etc/init.d/postgresql restart
-
+### the following has been moved to docker-entrypoint-madlib.sh
+### installation can only happen after volume has been mounted
 
 ### copy config from /etc to /var/lib
-RUN cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
-RUN cp -r /etc/postgresql/$PG_MAJOR/main/conf.d /var/lib/postgresql/$PG_MAJOR/main/conf.d
-RUN cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf /var/lib/postgresql/$PG_MAJOR/main/pg_hba.conf
+#RUN cp /etc/postgresql/$PG_MAJOR/main/postgresql.conf /var/lib/postgresql/$PG_MAJOR/main/postgresql.conf
+#RUN cp -r /etc/postgresql/$PG_MAJOR/main/conf.d /var/lib/postgresql/$PG_MAJOR/main/conf.d
+#RUN cp /etc/postgresql/$PG_MAJOR/main/pg_hba.conf /var/lib/postgresql/$PG_MAJOR/main/pg_hba.conf
 
 ### official PostgreSQL scripts for Docker images
 COPY docker-entrypoint.sh /usr/local/bin/
 COPY docker-ensure-initdb.sh /usr/local/bin/
+COPY docker-entrypoint-madlib.sh /usr/local/bin/
 
 # Allow everything inside Docker container
+RUN chmod -R 777 /usr/local/bin/docker-ensure-initdb.sh
 RUN chmod -R 777 /usr/local/bin/docker-entrypoint.sh
+RUN chmod -R 777 /usr/local/bin/docker-entrypoint-madlib.sh
 
 WORKDIR /usr/local/bin/
 
 ### TODO: is this still necessary?
-RUN ln -sT docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
+#RUN ln -sT docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh
 
+# RUN apt-get remove postgresql-16 postgresql-16-postgis-3 postgresql-16-postgis-3-scripts -y
 
 ### container runs PostgreSQL as service
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+#ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-madlib.sh"]
 CMD ["postgres"]

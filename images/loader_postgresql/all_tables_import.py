@@ -201,7 +201,9 @@ if __name__ == '__main__':
     
     # Establishing the connection
     conn = psycopg.connect(conninfo=connstring)
-    
+    conn.execute("SET client_encoding TO UTF8")
+    #print(conn.info.encoding)
+
     # initiate the cursor
     start_time = time.time()
     with conn:

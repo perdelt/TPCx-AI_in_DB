@@ -140,13 +140,14 @@ There are some fixed settings:
 * Ubuntu 22.04
 * PostgreSQL 15.x
 * PostgreSQL user/password: postgres/postgres
-* Database directory: `/var/lib/postgresql/15/main`
+* Database directory: `/var/lib/postgresql/data` (can be mounted from outside)
 * Python 3.10
 * MADLib 2.1
 
-There are two test scripts
-* `tests/madlib-test.sql`: MADLib logregr_train
-* `tests/plpython3-test.sql`: Python PL extension
+Another example run
+```
+docker run -d --name madlib -p 5432:5432 --shm-size 48G -v /data/madlib_data:/var/lib/postgresql/data/ madlib_postgresql:15.x_3.10_2.1 -c shared_buffers=32G
+```
 
 ### Interactive Mode
 
@@ -164,6 +165,7 @@ The Dockerfile contains sections to (optionally) also install
 
 These are not needed, so you can comment them out, but you may want to have them to have a more complete data science system.
 
+There are some test scripts for the extensions in the `tests/` folder.
 
 
 
