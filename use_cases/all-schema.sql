@@ -362,7 +362,10 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.uc03_serve(output_table TEXT)
+CREATE OR REPLACE PROCEDURE public.uc03_serve(
+    preprocessed TEXT,
+    output_table TEXT
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -377,8 +380,10 @@ DECLARE
     p_periods INT;
     model_found BOOLEAN;
 BEGIN
-    -- Create an empty output table to be filled later
-    EXECUTE format('DROP TABLE IF EXISTS %I', output_table); -- drop the output table if it exists
+    -- Drop the output table if it exists
+    EXECUTE format('DROP TABLE IF EXISTS %I', output_table);
+
+    -- Create the output table with the desired schema
     EXECUTE format('
         CREATE TABLE %I (
             store_id TEXT,
@@ -386,24 +391,26 @@ BEGIN
             week_index INT,
             forecast FLOAT
         )', output_table);
-    -- load the serve data via procedure call
-    call uc03_preprocess('serve', 'uc03_serve_preprocessed');
 
-    -- Loop through each store-department combination in serve.store_dept
-    FOR p_record IN SELECT * FROM uc03_serve_preprocessed
+    -- Call the preprocessing procedure with the dynamic preprocessed table name
+    EXECUTE format('CALL uc03_preprocess(%L, %L)', 'serve', preprocessed);
+
+    -- Loop through each store-department combination in the preprocessed data
+    FOR p_record IN EXECUTE format('SELECT * FROM %I', preprocessed)
     LOOP
         p_store_id := p_record.store;
         p_department := REGEXP_REPLACE(LOWER(p_record.department), '[^a-z0-9_]+', '_', 'g');
         p_periods := p_record.periods;
         model_found := FALSE;
 
-        -- Loop through the model tables to find a match
-        FOR v_record IN SELECT table_name
-                        FROM information_schema.tables
-                        WHERE table_schema = 'public'
-                        AND table_name LIKE 'arima_model_%'
-                        AND table_name NOT LIKE '%\_summary' ESCAPE '\'
-                        AND table_name NOT LIKE '%\_residual' ESCAPE '\'
+        -- Loop through the model tables to find a matching model
+        FOR v_record IN
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name LIKE 'arima_model_%'
+              AND table_name NOT LIKE '%\_summary' ESCAPE '\'
+              AND table_name NOT LIKE '%\_residual' ESCAPE '\'
         LOOP
             v_model_table_name := v_record.table_name;
             v_store_id := split_part(v_model_table_name, '_', 3);
@@ -411,17 +418,23 @@ BEGIN
 
             IF v_department_id = p_department AND v_store_id = p_store_id THEN
                 model_found := TRUE;
-                v_forecast_table_name := 'forecast_' || regexp_replace(lower(v_model_table_name), '^arima_model_', ''); -- drop arima_model_, leaves only store_id, department_id
-                -- RAISE NOTICE 'Predicting for store: %, department: % for % periods using model %I', p_store_id, p_department, p_periods, v_model_table_name;
+                v_forecast_table_name := 'forecast_' || regexp_replace(lower(v_model_table_name), '^arima_model_', ''); -- e.g., drop 'arima_model_' prefix
 
-                -- Call arima_forecast for the current model
+                -- **Raise a notice that the model has been found**
+                RAISE NOTICE 'Model found for store: %, department: %', p_store_id, p_department;
+
+                -- Drop the forecast table if it exists
                 EXECUTE format('DROP TABLE IF EXISTS %I', v_forecast_table_name);
+
+                -- Generate forecasts using the ARIMA model
                 EXECUTE format('SELECT madlib.arima_forecast(%L, %L, %L)', v_model_table_name, v_forecast_table_name, p_periods);
 
                 -- Insert the forecast results into the output table
-                EXECUTE format('INSERT INTO %I (store_id, department_id, week_index, forecast)
-                                SELECT %L, %L, steps_ahead, forecast_value FROM %I
-                                ORDER BY steps_ahead', output_table, p_store_id, p_department, v_forecast_table_name);
+                EXECUTE format('
+                    INSERT INTO %I (store_id, department_id, week_index, forecast)
+                    SELECT %L, %L, steps_ahead, forecast_value FROM %I
+                    ORDER BY steps_ahead
+                ', output_table, p_store_id, p_department, v_forecast_table_name);
 
                 EXIT; -- Exit the inner loop once the match is found and forecast is generated
             END IF;
@@ -434,7 +447,6 @@ BEGIN
     END LOOP;
 END;
 $$;
-
 /*
 
  Use Case 04
@@ -564,14 +576,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-create or replace procedure uc04_serve(output_table varchar)
+create or replace procedure uc04_serve(preprocessed varchar, output_table varchar)
     language plpgsql
     as $$
     begin
-        call uc04_preprocess('serve', 'uc04_serve_preprocessed');
-        execute format('call uc04_predict(''uc04_serve_preprocessed'', ''uc04_model'', ''%I'');', output_table);
+        execute format('call uc04_preprocess(''%I'', ''%I'')', 'serve', preprocessed);
+        execute format('call uc04_predict(''%I'', ''uc04_model'', ''%I'');', preprocessed, output_table);
     end;
     $$;
+
 
 /*
 
@@ -805,12 +818,12 @@ END;
 $$;
 
 
-create or replace procedure uc06_serve(output_table text)
+create or replace procedure uc06_serve(preprocessed text, output_table text)
     language plpgsql
     as $$
     begin
-        call uc06_preprocess('serve', 'uc06_serve_preprocessed');
-        execute format('CALL uc06_predict(''uc06_serve_preprocessed'', ''uc06_model'', ''%I'');', output_table);
+        execute format('call uc06_preprocess(''%I'', ''%I'')', 'serve', preprocessed);
+        execute format('CALL uc06_predict(''%I'', ''uc06_model'', ''%I'');', preprocessed, output_table);
     end;
     $$;
 
@@ -997,12 +1010,12 @@ begin
 end;
 $$ language plpgsql;
 
-create or replace procedure uc07_serve(output_table varchar)
+create or replace procedure uc07_serve(preprocessed varchar, output_table varchar)
 language plpgsql
 as $$
 begin
-    call uc07_preprocess('serve', 'uc07_serve_preprocessed');
-    execute format('call uc07_predict(''uc07_serve_preprocessed'', ''uc07_model'', ''%I'');', output_table);
+    execute format('call uc07_preprocess(''%I'', ''%I'')', 'serve', preprocessed);
+    execute format('call uc07_predict(''%I'', ''uc07_model'', ''%I'');', preprocessed, output_table);
 end;
 $$;
 
@@ -1011,7 +1024,7 @@ CREATE OR REPLACE PROCEDURE public.uc07_predict_numpy(model text, predictions te
 AS $procedure$
   import numpy as np
   import gc
-  
+
   # Execute the query and fetch the results
   result = plpy.execute("SELECT matrix_u, matrix_v FROM {model}".format(model=model))
   #plpy.notice(result[0]['matrix_u'])
@@ -1453,12 +1466,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- serve
-create or replace procedure uc08_serve(output_table text)
+create or replace procedure uc08_serve(preprocessed text, output_table text)
     language plpgsql
     as $$
     begin
-        call uc08_preprocess('serve', 'uc08_serve_preprocessed');
-        execute format('call uc08_predict(''uc08_serve_preprocessed'', ''uc08_model'', ''%I'');', output_table);
+        execute format('call uc08_preprocess(''%I'', ''%I'')', 'serve', preprocessed);
+        execute format('call uc08_predict(''%I'', ''uc08_model'', ''%I'');', preprocessed, output_table);
 end;
 $$;
 
@@ -1610,11 +1623,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- serve
-create or replace procedure uc10_serve(output_table text)
+create or replace procedure uc10_serve(preprocessed text, output_table text)
     language plpgsql
     as $$
     begin
-        call uc10_preprocess('serve', 'uc10_serve_preprocessed');
-        execute format('call uc10_predict(''uc10_serve_preprocessed'', ''uc10_model'', ''%I'');', output_table);
+        execute format('call uc10_preprocess(''%I'', ''%I'')', 'serve', preprocessed);
+
+        execute format('call uc10_predict(''%I'', ''uc10_model'', ''%I'');', preprocessed, output_table);
 end;
 $$;

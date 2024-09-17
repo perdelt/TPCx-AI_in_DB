@@ -65,7 +65,7 @@ call uc03_score('uc03_score_preprocessed', 'uc03_score_predictions', 'uc03_score
 perform record_execution_time('uc03', 'score' , v_start_time);
 
 v_start_time := clock_timestamp();
-CALL uc03_serve('uc03_serve_results');
+CALL uc03_serve('uc03_serve_preprocessed', 'uc03_serve_results');
 perform record_execution_time('uc03', 'serve' , v_start_time);
 /*
 
@@ -93,7 +93,7 @@ call uc04_score('uc04_score_predictions', 'uc04_score_results');
 perform record_execution_time('uc04', 'score' , v_start_time);
 
 v_start_time := clock_timestamp();
-call uc04_serve('uc04_serve_results');
+call uc04_serve('uc04_serve_preprocessed', 'uc04_serve_results');
 perform record_execution_time('uc04', 'serve', v_start_time);
 /*
 
@@ -121,7 +121,7 @@ CALL uc06_score('uc06_score_predictions', 'uc06_score_results');
 perform record_execution_time('uc06', 'score' , v_start_time);
 
 v_start_time := clock_timestamp();
-CALL uc06_serve('uc06_serve_results');
+CALL uc06_serve('uc06_serve_preprocessed', 'uc06_serve_results');
 perform record_execution_time('uc06', 'serve' , v_start_time);
 /*
 
@@ -149,7 +149,7 @@ call uc07_score('uc07_score_predictions', 'uc07_score_results');
 perform record_execution_time('uc07', 'score' , v_start_time);
 
 v_start_time := clock_timestamp();
-call uc07_serve('uc07_serve_results');
+call uc07_serve('uc07_serve_preprocessed', 'uc07_serve_results');
 perform record_execution_time('uc07', 'serve' , v_start_time);
 -- /*
 --
@@ -177,7 +177,7 @@ call uc08_score('uc08_score_predictions', 'uc08_score_results');
 perform record_execution_time('uc08', 'score' , v_start_time);
 
 v_start_time := clock_timestamp();
-call uc08_serve('uc08_serve_results');
+call uc08_serve('uc08_serve_preprocessed','uc08_serve_results');
 perform record_execution_time('uc08', 'serve' , v_start_time);
 /*
 
@@ -206,7 +206,7 @@ CALL uc10_score('uc10_score_predictions', 'uc10_score_results');
 perform record_execution_time('uc10', 'score' , v_start_time);
 
 v_start_time := clock_timestamp();
-call uc10_serve('uc10_serve_results');
+call uc10_serve('uc10_serve_preprocessed', 'uc10_serve_results');
 perform record_execution_time('uc10', 'serve' , v_start_time);
 
 end;
