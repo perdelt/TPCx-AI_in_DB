@@ -10,3 +10,5 @@ __pycache__/*
 *.jar
 data_import/.env
 images/TPCx-AI/tpcx-ai-v1.0.3.1/*
+.tpcx-ai_venv
+
