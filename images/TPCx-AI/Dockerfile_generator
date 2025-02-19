@@ -38,7 +38,7 @@ LABEL description="This container runs a bash script that generates TPCx-AI data
 ENV TPCxAI_SCALE_FACTOR=1
 ENV TPCxAI_NODE_COUNT=1
 ENV TPCxAI_NODE_NUMBER=1
-ENV TPCxAI_SEED=4234567890
+ENV TPCxAI_SEED=1234
 # Set the working directory in the container
 WORKDIR /tpcx-ai
 
