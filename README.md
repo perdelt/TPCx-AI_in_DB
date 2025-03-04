@@ -37,30 +37,32 @@ docker run --rm tpcx-ai-datagenerator:v1.0.3.1
 Data will be generated into subfolders of `/tpcx-ai/output/raw_data`.
 The subfolders are `scoring`,  `serving` and  `training`.
 
-You can set some parameters as environment variables
+You can set a parameter as environment variable
 * `TPCxAI_SCALE_FACTOR`: Scaling factor, size of data approx. in GB (default 1)
-* `TPCxAI_NODE_COUNT`: Total number of parallel containers for data generation (default 1)
-* `TPCxAI_NODE_NUMBER`: Number of the current container in a set of parallel containers (default 1)
-* `TPCxAI_SEED`: Random seed for data generation (default 4234567890 like in the toolkit)
+
+After generation has finished, data is moved to `/data/tpcxai/SF$TPCxAI_SCALE_FACTOR`.
+You can mount that output folder.
 
 Example:
 ```
 docker run --rm \
+	-v ~/tpcxai-data/:/data/tpcxai/ \
 	-e TPCxAI_SCALE_FACTOR=10 \
 	tpcx-ai-datagenerator:v1.0.3.1
 ```
 
 Data generation automatically scales (vertically) to the number of available threads.
-In order to scale horizontally, generation can be split into `TPCxAI_NODE_COUNT` number of processes.
-The parameter `TPCxAI_NODE_NUMBER` sets which part of these parts the container should generate.
 
-You can mount the output folders like
+Note: Horizontal generation (like in TPC-H and TPC-DS) seems not to be implemented at the moment.
+
+Note: You can also set a random seed via the envorinment variable `TPCxAI_SEED`.
+To make this active, you have to change `images/TPCx-AI/tpcx-ai-v1.0.3.1/driver/tpcxai-driver/__main__`.
+The toolkit sets the random seed statically to 1234.
+You should use something like
 ```
-docker run --rm \
-	-v ~/tpcxai-data/SF1:/tpcx-ai/output/raw_data/ \
-	-e TPCxAI_SCALE_FACTOR=1 \
-	tpcx-ai-datagenerator:v1.0.3.1
+seed = int(os.getenv('MY_SEED', '1234'))
 ```
+instead.
 
 
 
@@ -112,7 +114,7 @@ Note that training must happen before serving.
 
 To start in an interactive mode (for example for debugging), use
 ```
-docker run -it --name tpcxai -v ~/tpcxai-data:/tpcx-ai/output/raw_data/ --entrypoint /bin/bash tpcx-ai-benchmarker:v1.0.3.1
+docker run -it --name tpcxai -v ~/tpcxai-data/SF1:/tpcx-ai/output/raw_data/ --entrypoint /bin/bash tpcx-ai-benchmarker:v1.0.3.1
 ```
 Inside interactive mode, you might for example want to run and inspect use case 2:
 ```
@@ -180,10 +182,10 @@ docker build -t tpcx-ai-loader:v1.0.3.1 -f Dockerfile_loader .
 
 2. Run the image with
 ```
-docker run --name loader -v ~/tpcxai:/data --rm --net=host -e TPCxAI_SCALE_FACTOR=1  tpcx-ai-loader:v1.0.3.1
+docker run --name loader -v ~/tpcxai-data/:/data/tpcxai/ --rm --net=host -e TPCxAI_SCALE_FACTOR=1  tpcx-ai-loader:v1.0.3.1
 ```
 
-The container expects the data to be in `/data` and PostgreSQL to listen at `localhost:5432`.
+The container expects the data to be in `/data/tpcxai/SF$TPCxAI_SCALE_FACTOR` and PostgreSQL to listen at `localhost:5432`.
 
 You can set some parameters as environment variables
 * `TPCxAI_SCALE_FACTOR`: Scaling factor, size of data approx. in GB (default 1)
